@@ -6,10 +6,10 @@
 %--------------------------------------------------------------------------
 % 1. The TS-MARS algorithm by Qi Zhang and Jiaqiao Hu [1] is implemented 
 % for solving single-objective box-constrained expensive deterministic
-% optimization problems.
+% optimization problems
 % 2. In this implementation, the algorithm samples candidate solutions from 
 % a sequence of independent multivariate normal distributions that 
-% recursively approximiates the corresponding Boltzmann distributions [2].
+% recursively approximiates the corresponding Boltzmann distributions [2]
 %--------------------------------------------------------------------------
 % REFERENCES
 % [1] Qi Zhang and Jiaqiao Hu: A Two-time-scale Adaptive Search Algorithm
@@ -29,7 +29,7 @@ clearvars; close all;
 %% PROBLEM SETTING
 % The test function H(x) is the sum squares function in dimension 10 (d=10)
 % with box-constrain [-10,10]^d
-% and shifted to have an optimal(max) objective value -1.
+% and shifted to have an optimal(max) objective value -1
 d=10; % dimension of the search region
 left_bound=-10; % left bound of the search region
 right_bound=10; % right bound of the search region
@@ -56,55 +56,42 @@ t=abs(feval(fcn_name,left_bound+(right_bound-left_bound)*rand(d,1)))/6;
 gamma_t=0.98;
 
 %% INITIALIZATION
-% initial mean of the sampling distribution
-mu_old=left_bound+(right_bound-left_bound)*rand(d,1);
-% initial variance of the sampling distribution
-var_old=((right_bound-left_bound)/2)^2*ones(d,1);
+mu_old=left_bound+(right_bound-left_bound)*rand(d,1); % initial mean of the sampling distribution
+var_old=((right_bound-left_bound)/2)^2*ones(d,1); % initial variance of the sampling distribution
+G_x_old=zeros(d,1); G_x2_old=zeros(d,1); % initial gradient estimator Gamma(X) = (X,X^2)^T
+
 % calculating the initial gradient estimator
-[eta_x_old,eta_x2_old]=...
-    truncated_mean_para_fcn(left_bound,right_bound,mu_old,var_old);
-% initial gradient estimator Gamma(X) = (X,X^2)^T
-G_x_old=zeros(d,1); 
-G_x2_old=zeros(d,1);
+[eta_x_old,eta_x2_old]=truncated_mean_para_fcn(left_bound,right_bound,mu_old,var_old);
 % record current best true objective values found at each step
-c_best_H=[]; c_best_H(1)=-inf;
+best_H=[]; best_H(1)=-inf;
 
 %% MAIN LOOP
-fprintf('Main loop begin.\n');
-tic; % count main loop time
+fprintf('Main loop begins \n'); tic; % count main loop time
 k=0; % iteration counter
 num_evaluation=0; % budget consumption
 while num_evaluation+1<=budget
     %% PROGRESS REPORT
     if mod(k,100)==0 && k>0
         fprintf('iter: %5d, eval: %5d, cur best: %8.4f, true optimum: %8.4f \n',...
-            k,num_evaluation,c_best_H(k),optimal_objective_value);
+            k,num_evaluation,best_H(k),optimal_objective_value);
     end
     k=k+1;
     
     %% SAMPLING
-    % Given the sampling parameter theta_old=(mu_old,var_old),
-    % generate a sample x from the independent multivariate normal density.
+    % given the sampling parameter theta_old=(mu_old,var_old)
+    % generate a sample x from the independent multivariate normal density
     X_sample=normt_rnd(mu_old,var_old,left_bound,right_bound);              
     
     %% PERFORMANCE ESTIMATIONS
     cur_H=feval(fcn_name,X_sample); % current objective function value
-    num_evaluation=num_evaluation+1;
-    c_best_H(k)=max(c_best_H(end),cur_H);    
+    num_evaluation=num_evaluation+1; best_H(k)=max(best_H(end),cur_H);    
 
     %% ADAPTIVE HYPERPARAMETERS
-    % alpha: learning rate for updating the mean parameter function
-    alpha=a1/(k+a2)^gamma_a;
-    % beta: learning rate for updating the gradient estimator
-    beta=b1/(k+b2)^gamma_b;
-    % lambda: step-size for the annealing temperature
-    lambda=1/(k+abs(c_best_H(k)))^gamma_t;
-    t=t*(1-lambda); % current annealing temperature
+    [alpha,beta,t]=adaptive_hyper_para(k,a1,a2,gamma_a,b1,b2,gamma_b,best_H(k),gamma_t,t);
     
     %%  GRADIENT ESTIMATOR
     G_x_new=G_x_old+beta*( exp(cur_H/t).*X_sample-exp(cur_H/t).*G_x_old);
-    G_x2_new=G_x2_old+beta*(exp(cur_H/t).*X_sample.* X_sample-...
-        exp(cur_H/t).*G_x2_old );
+    G_x2_new=G_x2_old+beta*(exp(cur_H/t).*X_sample.* X_sample-exp(cur_H/t).*G_x2_old );
     
     %% MEAN PRARMETER FUNCTION
     eta_x_new = eta_x_old+alpha*(G_x_new-eta_x_old);
@@ -121,16 +108,16 @@ while num_evaluation+1<=budget
     
     %% VISUALIZATION
     if mod(k,100)==0
-        plot(c_best_H,'r-o'); % current best
+        plot(best_H,'r-o'); % current best
         hold on
-        cur_size=size(c_best_H);
+        cur_size=size(best_H);
         optimal_line=optimal_objective_value*ones(cur_size(2),1);
         plot(optimal_line,'k:','LineWidth',5); % true optimal value
         xlabel('Number of function evaluations')
         ylabel('Objective function value')
         title(sprintf('<%s function>   Iteration: %5d  Evaluation: %5d',fcn_name,k,num_evaluation));
         legend('TS-MARS','True optimal value','Location','southeast');
-        ylim([c_best_H(1)*1.1 100]);
+        ylim([best_H(1)*1.1 100]);
         grid on
         drawnow;
     end
@@ -138,7 +125,7 @@ end
 
 %% FINAL REPORT
 fprintf('iter: %5d, eval: %5d, cur best: %8.4f, true optimum: %8.4f \n',...
-    k,num_evaluation,c_best_H(k),optimal_objective_value);
+    k,num_evaluation,best_H(k),optimal_objective_value);
 fprintf('Main loop ends \n');
 tMainLoop=toc; % count main loop time
 fprintf('Main loop takes %8.4f seconds \n',tMainLoop);
