@@ -2,7 +2,7 @@
 
 0. Corresponding author: Qi Zhang, Department of Applied Mathematics and Statistics, Stony Brook University, Stony Brook, NY 11794-3600
 
-1. The TS-MARS algorithm by Qi Zhang and Jiaqiao Hu [1] is implemented for solving single-objective box-constrained expensive deterministic optimization problems.
+1. The TS-MARS algorithm by Qi Zhang and Jiaqiao Hu [1] is implemented for solving single-objective box-constrained expensive deterministic optimization problems. Note that the implementation could be speed-up significantly by simplifying calculations and exploiting parallel computing. The current version aims at the readability.
 
 2. TS-MARS a random search algorithm for solving deterministic optimization problems in a black-box scenario. The algorithm has a model-based nature and iteratively finds improved solutions by modifying and sampling from a probability distribution over the solution space. In contrast to existing algorithms in the class, which are mostly population-based, our approach employs a two-time-scale stochastic approximation idea and uses only a single candidate solution per iteration. We prove global convergence of the algorithm and carry out numerical experiments to illustrate its performance.
 
